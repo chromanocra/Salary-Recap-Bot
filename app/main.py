@@ -3,6 +3,8 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 import os
 import sys
+import threading
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 from dotenv import load_dotenv
 
 # Memaksa Python membaca folder utama agar tidak error ModuleNotFound
@@ -43,7 +45,19 @@ async def rekap(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Gagal men-scrape data. Pastikan teks bill sesuai dengan format asli.")
         print(f"Error detail: {e}")
 
+def run_dummy_server():
+    port = int(os.getenv("PORT", 8000))
+    server_address = ('', port)
+    httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
+    print(f"Dummy server running on port {port}...")
+    httpd.serve_forever()
+
+
+
+
 def main():
+
+    threading.Thread(target=run_dummy_server, daemon=True).start()
     TOKEN = os.getenv("BOT_TOKEN") # Mengambil token dari file .env
     if not TOKEN:
         TOKEN = "BOT_TOKEN" # Backup jika tidak pakai .env
