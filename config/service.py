@@ -1,4 +1,3 @@
-# config/service.py
 import re
 
 def format_rupiah(angka):
@@ -6,7 +5,7 @@ def format_rupiah(angka):
     return f"{angka:,}".replace(',', '.')
 
 def scrape_dan_buat_rekap(bill_text, client_name, link_payment):
-    talent_match = re.search(r"and\s+(.+?)\s+is prepared", bill_text, re.IGNORECASE)
+    talent_match = re.search(r"(?:and\s+)?([A-Za-z\s]+?)\s+is prepared", bill_text, re.IGNORECASE)
     talent_raw = talent_match.group(1).strip().title() if talent_match else "Unknown Talent"
     
     talent_words = talent_raw.split()
@@ -18,18 +17,34 @@ def scrape_dan_buat_rekap(bill_text, client_name, link_payment):
     feeq_match = re.search(r"FEEQ:\s*([\d.]+)", bill_text, re.IGNORECASE)
     feeq = int(feeq_match.group(1).replace('.', '')) if feeq_match else 500
 
-    items = re.findall(r"[-–—•*]\s*(.*?)\s*:\s*([\d.]+)", bill_text)
+    items = re.findall(r"(?:[-–—•*]\s*)?([^:\n]+?)\s*:\s*([\d.]+)", bill_text)
+    
     total_harga = 0
     details_text_rekap = ""
     
     for item_name, item_price in items:
-        if "feeq" in item_name.lower():
+        item_name_clean = item_name.strip().lower()
+        
+        if "session type" in item_name_clean or "feeq" in item_name_clean or "prepared" in item_name_clean:
             continue
-        harga = int(item_price.replace('.', ''))
-        total_harga += harga
-        details_text_rekap += f"     #. {item_name.strip()} : {format_rupiah(harga)}\n"
+            
+        try:
+            harga = int(item_price.replace('.', ''))
+            total_harga += harga
+            details_text_rekap += f"     #. {item_name.strip()} : {format_rupiah(harga)}\n"
+        except ValueError:
+            continue
 
-    potongan_persen, potongan_agensi, gaji_talent = potongan_agensi_dan_gaji_talent(total_harga)
+    if total_harga < 10000:
+        potongan_persen = 10
+    elif total_harga < 30000:
+        potongan_persen = 12
+    else:
+        potongan_persen = 15
+        
+    potongan_agensi = int(total_harga * (potongan_persen / 100))
+    gaji_talent = total_harga - potongan_agensi
+
 
     rekap_text = (
         f"SALARY. {potongan_persen}%.\n\n"
@@ -44,17 +59,5 @@ def scrape_dan_buat_rekap(bill_text, client_name, link_payment):
         f"      {format_rupiah(total_harga)} - {potongan_persen}% = {format_rupiah(gaji_talent)} IDR\n"
         f"     Agency Income =  {format_rupiah(potongan_agensi)} IDR\n"
         f"5. Link payment = {link_payment}"
-        )
+    )
     return rekap_text
-
-def potongan_agensi_dan_gaji_talent(total_harga):
-    if total_harga < 10000:
-        potongan_persen = 10
-    elif total_harga < 30000:
-        potongan_persen = 12
-    else:
-        potongan_persen = 15
-        
-    potongan_agensi = int(total_harga * (potongan_persen / 100))
-    gaji_talent = total_harga - potongan_agensi
-    return potongan_persen, potongan_agensi, gaji_talent
