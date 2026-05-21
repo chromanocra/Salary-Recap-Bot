@@ -5,9 +5,9 @@ def format_rupiah(angka):
     return f"{angka:,}".replace(',', '.')
 
 def scrape_dan_buat_rekap(bill_text, client_name, link_payment):
-    talent_match = re.search(r"(?:and\s+)?([A-Za-z\s]+?)\s+is prepared", bill_text, re.IGNORECASE)
-    talent_raw = talent_match.group(1).strip().title() if talent_match else "Unknown Talent"
-    
+    talent_match = re.search(r"(and\s+)?([A-Za-z\s]+?)\s+is prepared", bill_text, re.IGNORECASE)
+    talent_raw = talent_match.group(2).strip().title() if talent_match else "Unknown Talent"
+
     talent_words = talent_raw.split()
     talent_name = f"{talent_words[0]} {talent_words[1]}" if len(talent_words) > 1 else talent_raw
 
